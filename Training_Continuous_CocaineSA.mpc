@@ -1,0 +1,371 @@
+\
+\ *****************************************
+\ *                                       *
+\ * Intermittent_Or_Continuous_CocaineSA  *
+\ *                                       *
+\ *****************************************
+\ Scott Ng-Evans (2018)
+\
+\ Methods modified from Nicolas et al:
+\
+\      Each session started by inserting the two levers and illuminating the houselight.
+\      Pressing on the active lever delivered a cocaine infusion (0.1 ml/3.5 s; 0.75 mg/kg/infusion)
+\      and a compound tone-light cue for 3.5 s, followed by a 3.5-s timeout during which
+\      lever pressing were not reinforced. Pressing on the inactive lever had no programmed
+\      consequence. The rats were first trained to self-administer cocaine on a
+\      fixed-ratio 1 (FR1) schedule over 4 days for 2-h/d (max infusions=20). Next, the rats
+\      self-administered cocaine either continuously or intermittently for 8-h/d for 12 days.
+\      In the continuous access condition, the rats had free access to the drug during the daily
+\      sessions. In the intermittent access condition, the rats had access to cocaine during
+\      16 5-min ON periods that were separated by 25-min OFF periods (16), corresponding to
+\      80-min of cocaine access during the 8-h daily session. At the onset of each 5-min ON period
+\      the lever extended and the houselight was turned on; at the end of the 5-min access period
+\      the levers retracted and the houselight was turned off.
+\
+\
+\
+\
+\ Revisions:
+\
+\
+\
+\
+\
+
+\
+\
+\INPUTS:
+^LeftLeverIn      = 1
+^RightLeverIn     = 2
+^HeadEntry        = 3
+
+
+\OUTPUTS:
+^LeftLeverOut     = 1
+^RightLeverOut    = 2
+^PelletFeeder     = 3
+^Sonalert         = 4
+^LeftCueLight     = 5
+^RightCueLight    = 6
+^HouseLight       = 7
+^SyringePump      = 8
+^Fan              = 16
+
+
+
+\ Z-Pulses
+\
+\ Z1 drug period starts
+\ Z2 no-drug period starts
+\ Z3 infusion start
+\ Z4 infusion end
+\ Z5 post-infusion timeout over
+
+
+
+\ Variable Definitions:
+
+\ A(0)  = Active lever (0:right 1:left)
+\ A(1)  = Session length in hours
+\ A(2)  = Length of drug periods (min)
+\ A(3)  = Length of no-drug periods (min)
+\ A(4)  = Post-infusion time-out length (sec)
+\ A(5)  = Houselight during the drug session (0:off 1:on)
+\ A(6)  = Houselight for no-drug periods (0:off 1:on)
+\ A(7)  = Bin size in secondss for K, L, M
+\ A(8)  = Dummy variable for menu display
+\ A(9)  = Dummy variable for menu display
+\ A(10) = Signals infusion in progress (0:no infusion/timeout in progress, 1:infusion/timeout in progress)
+\ A(11) = Infusion duration (sec)
+\ A(12) = Intermittent or Continuous (0:Intermitt 1:Cont)
+\ A(13) = Maximum infusions
+\
+\ B(0)  = A(2) converted to system time
+\ B(1)  = A(3) converted to system time
+\ B(2)  = NOT USED - reserved fro BDD procedure
+\ B(3)  = NOT USED - reserved for BDD procedure
+\ B(4)  = A(4) converted to system time
+\ B(5)  = Used in drug period time countdown, A(2) converted to seconds
+\ B(6)  = Ueed in no-drug period time countdown, A(3) converted to seconds
+\ B(7)  = Session time count up display in seconds
+\ B(8)  = A(7) converted to system time
+\ B(9)  = A(11) converted to system time
+\
+\ C(0)  = Right presses in drug period
+\ C(1)  = Left presses in drug period
+\ C(2)  = Food tray head entries
+\ C(3)  = Infusion count
+\ C(4)  = Drug period count
+\ C(5)  = No-drug period count
+\
+\ D()   = event time stamp
+\ E()   = event identity stamp
+\       1  - Right press
+\       2  - Left press
+\       3  - Infusion start
+\       4  - Infusion end
+\       5  - Food tray head entry
+\       6  - Right lever extends
+\       7  - Left lever extends
+\       8  - Right lever retracts
+\       9  - Left lever retracts
+\      14  - Right lever cue light on
+\      15  - Left lever cue light on
+\      16  - Right lever cue light off
+\      17  - Left lever cue light off
+\      18  - Houselight on
+\      19  - Houselight off
+\      20  - Drug period starts
+\      21  - No-drug period starts
+\      22  - Post-infusion timeout over
+\      23  - Tone on
+\      24  - Tone off
+\      25  - Continuous session
+\     100  - End session marker
+\
+\ G     = Event counter
+\ H     = Session timer
+\ I()   = Infusion times
+\ K()   = Binned infusions  - bin size = A(7) minutes
+\ L()   = Binned responses on active lever - bin size = A(7) seconds
+\ M()   = Binned responses on inactive lever - bin size = A(7) seconds
+\ N     = Counter for bin time for levers
+\ O     = Counter for bin time for infusions
+\
+
+
+
+DIM A = 50
+DIM B = 50
+DIM C = 50
+DIM D = 50000
+DIM E = 50000
+DIM I = 1000
+DIM K = 1000
+DIM L = 1000
+DIM M = 1000
+
+
+
+VAR_ALIAS -------------------------------------------------------------------- = A(8)
+VAR_ALIAS Session length(hour) = A(1)
+VAR_ALIAS Maximum infusions = A(13)
+VAR_ALIAS Active lever (0:right 1:left) = A(0)
+VAR_ALIAS Infusion duration (sec) = A(11)
+VAR_ALIAS Post-inf time-out length (sec) = A(4)
+\VAR_ALIAS Intermittent or Continuous (0:Intermitt 1:Cont) = A(12)
+\VAR_ALIAS Length of drug periods (min) = A(2)
+\VAR_ALIAS Length of no-drug periods (min) = A(3)
+\VAR_ALIAS Houselight for drug periods (0:off 1:on) = A(5)
+\VAR_ALIAS Houselight for no-drug periods (0:off 1:on) = A(6)
+VAR_ALIAS -------------------------------------------------------------------- = A(9)
+
+
+
+S.S.1,  \ Default set-up, drug/no-drug switching
+  S1,
+    0": SET A(0)  = 1;    \Active lever (0:right 1:left)
+        SET A(1)  = 2;    \Session length in hours
+        SET A(2)  = 5;    \Length of drug periods (min)
+        SET A(3)  = 25;   \Length of no-drug periods (min)
+        SET A(4)  = 3.5;  \Post-infusion time-out length (sec)
+        SET A(5)  = 1;    \Houselight during the drug session (0:off 1:on)
+        SET A(6)  = 0;    \Houselight for no-drug periods (0:off 1:on)
+        SET A(7)  = 60;   \Bin size in seconds for K, L, M
+        SET A(11) = 3.5;  \Infusion duration(sec)
+        SET A(12) = 1;    \Intermittent or continuous (0:Itermittent  1:Continuous)
+        SET A(13) = 20;   \Maximum number of infusions
+        SET D(0) = -987.987, E(0) = -987.987;
+        SET K(1) = -987.987, L(1) = -987.987, M(1) = -987.987;
+        SET I(0) = -987.987;
+        ON ^Fan ---> S2
+  S2,
+    #START: IF A(12) = 0 [@INTERMITT, @CONT]
+            @INTERMITT: SET B(0) = A(2) * 1'; Z1; ADD C(4);
+                        SET D(G) = H; SET E(G) = 20; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S3
+            @CONT: Z1; ADD C(4);
+                   SET D(G) = H; SET E(G) = 20; ADD G; SET D(G) = -987.987; SET E(G) = -987.987;
+                   SET D(G) = H; SET E(G) = 25; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+  S3,
+    B(0)#T: Z2; SET B(1) = A(3) * 1'; ADD C(5);
+            SET D(G) = H; SET E(G) = 21; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S4
+  S4,
+    B(1)#T: SET B(0) = A(2) * 1'; Z1; ADD C(4);
+            SET D(G) = H; SET E(G) = 20; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S3
+
+
+
+
+
+S.S.2,  \ Individual right and left presses and binning during drug period
+  S1,
+    #Z1: SET N = 0, B(8) = A(7) * 1" ---> S2  \Drug period
+  S2,
+    1#R^RightLeverIn: SET D(G) = H; SET E(G) = 1; ADD G, C(0); SET D(G) = -987.987; SET E(G) = -987.987;
+                      IF A(0) = 0 [@RIGHT, @LEFT]
+                      @RIGHT: ADD L(N) ---> SX
+                      @LEFT: ADD M(N) ---> SX
+    1#R^LeftLeverIn: SET D(G) = H; SET E(G) = 2; ADD G, C(1); SET D(G) = -987.987; SET E(G) = -987.987;
+                     IF A(0) = 0 [@RIGHT, @LEFT]
+                     @RIGHT: ADD M(N) ---> SX
+                     @LEFT: ADD L(N) ---> SX
+    B(8)#T: ADD N; SET K(N) = 0, L(N) = 0, M(N) = 0, K(N+1) = -987.987, L(N+1) = -987.987, M(N+1) = -987.987 ---> S2
+    #Z2: ---> S1  \No-drug period
+
+
+
+
+
+S.S.3,  \ Infusion and post-infusion timeout
+  S1,
+    #START!#Z1: IF A(0) = 0 [@RIGHT, @LEFT]
+                @RIGHT: ---> S2
+                @LEFT: --->  S5
+  S2,
+    1#R^RightLeverIn: IF (C(3)< A(13)) [@REWARD, @NOREWARD]
+                      @REWARD: ON ^SyringePump; Z3;
+                               SET B(9) = A(11) * 1";
+                               ADD K(N);
+                               SET A(10) = 1;
+                               SET I(C(3)) = H; SET I(C(3)+1) = -987.987;
+                               SET D(G) = H; SET E(G) = 3; ADD G, C(3); SET D(G) = -987.987; SET E(G) = -987.987 ---> S3
+                      @NOREWARD: ADD C(3) ---> SX
+    #Z2: OFF ^SyringePump; SET A(10 ) = 0 ---> S1  \Turn pump off in case it is on and transition to no-drug period
+  S3,
+    B(9)#T: OFF ^SyringePump; Z4; SET B(4) = A(4) * 1";
+            SET D(G) = H; SET E(G) = 4; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S4
+  S4,
+    B(4)#T: Z5; SET A(10) = 0;
+            SET D(G) = H; SET E(G) = 22; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S2
+  S5,
+    1#R^LeftLeverIn: IF (C(3)< A(13)) [@REWARD, @NOREWARD]
+                     @REWARD: ON ^SyringePump; Z3;
+                              SET B(9) = A(11) * 1";
+                              ADD K(N);
+                              SET A(10) = 1;
+                              SET I(C(3)) = H; SET I(C(3)+1) = -987.987;
+                              SET D(G) = H; SET E(G) = 3; ADD G, C(3); SET D(G) = -987.987; SET E(G) = -987.987 ---> S6
+                     @NOREWARD: ADD C(3) ---> SX
+    #Z2: OFF ^SyringePump; SET A(10) = 0 ---> S1  \Turn pump off in case it is on and transition to no-drug period
+  S6,
+    B(9)#T: OFF ^SyringePump; Z4; SET B(4) = A(4) * 1";
+            SET D(G) = H; SET E(G) = 4; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S7
+  S7,
+    B(4)#T: Z5; SET A(10) = 0;
+    SET D(G) = H; SET E(G) = 22; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S5
+
+
+
+
+
+S.S.4,  \ Head entry detector
+  S1,
+    #START: ---> S2
+  S2,
+    1#R^HeadEntry: SET D(G) = H; SET E(G) = 5; ADD G, C(2); SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+
+
+
+
+
+S.S.5,  \ House light
+  S1,
+    #Z1: IF A(5) = 0 [@DRUGHLOFF, @DRUGHLON]
+     @DRUGHLOFF: OFF ^HouseLight; SET D(G) = H; SET E(G) = 19; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+     @DRUGHLON: ON ^HouseLight; SET D(G) = H; SET E(G) = 18; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+    #Z2: IF A(6) = 0 [@NODRUGHLOFF, @NODRUGHLON]
+     @NODRUGHLOFF: OFF ^HouseLight; SET D(G) = H; SET E(G) = 19; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+     @NODRUGHLON: ON ^HouseLight; SET D(G) = H; SET E(G) = 18; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+
+
+
+
+
+S.S.6,   \ Lever Cue lights
+  S1,
+    #Z3: IF A(0) = 0 [@RIGHT, @LEFT]
+         @RIGHT: ON ^RightCueLight; SET D(G) = H; SET E(G) = 14; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+         @LEFT:  ON ^LeftCueLight; SET D(G) = H; SET E(G) = 15; ADD G; SET D(G) = -987.987; SET E(G) = -987.987  ---> SX
+    #Z4: IF A(0) = 0 [@RIGHT, @LEFT]
+         @RIGHT: OFF ^RightCueLight; SET D(G) = H; SET E(G) = 16; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+         @LEFT:  OFF ^LeftCueLight; SET D(G) = H; SET E(G) = 17; ADD G; SET D(G) = -987.987; SET E(G) = -987.987  ---> SX
+
+
+
+
+
+S.S.7,   \ Tone
+  S1,
+    #Z3: ON ^Sonalert; SET D(G) = H; SET E(G) = 23; ADD G; SET D(G) = -987.987; SET E(G) = -987.987  ---> SX
+    #Z4: OFF ^Sonalert; SET D(G) = H; SET E(G) = 24; ADD G; SET D(G) = -987.987; SET E(G) = -987.987  ---> SX
+
+
+
+
+
+S.S.8,   \ Levers extend and retract
+  S1,
+    #Z1: ON ^RightLeverOut, ^LeftLeverOut;
+         SET D(G) = H; SET E(G) = 6; ADD G; SET D(G) = -987.987; SET E(G) = -987.987;
+         SET D(G) = H; SET E(G) = 7; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+    #Z2: OFF ^RightLeverOut, ^LeftLeverOut;
+         SET D(G) = H; SET E(G) = 8; ADD G; SET D(G) = -987.987; SET E(G) = -987.987;
+         SET D(G) = H; SET E(G) = 9; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+
+
+
+
+
+S.S.9,  \ Display
+  S1,
+    #START: ---> S2
+  S2,
+    .2": SHOW 1,   INFUSIONS: , C(3);
+         SHOW 2,   RIGHT PRESS: , C(0);
+         SHOW 3,   LEFT PRESS: , C(1);
+         SHOW 6,   HEAD ENT: , C(2) ---> S2
+
+
+
+
+
+\S.S.10,  \ Drug and no-drug period countdown
+\  S1,
+\    #START!#Z1: SET B(5) = A(2) * 60; SHOW 7, DRUG PERIOD SEC: , B(5) ---> S2
+\  S2,
+\    1": SUB B(5); IF B(5) < 0 [@NOMARK, @MARK]
+\        @NOMARK: ---> S2
+\        @MARK: SHOW 7, DRUG PERIOD SEC: , B(5) ---> S2
+\    #Z2: SET B(6) = A(3) * 60; SHOW 7, NO-DRUG PERIOD SEC: , B(6) ---> S3
+\  S3,
+\    1": SUB B(6); IF B(6) < 0 [@NOMARK, @MARK]
+\        @NOMARK: ---> S3
+\        @MARK: SHOW 7, NO-DRUG PERIOD SEC: , B(6) ---> S3
+\    #Z1: SET B(5) = A(2) * 60; SHOW 7, DRUG PERIOD SEC: , B(5) ---> S2
+
+
+
+
+
+S.S.11,  \ Session time display
+  S1,
+    #START: ---> S2
+  S2,
+    1": ADD B(7); SHOW 9, SESS TIME(MIN): , B(7)/60 ---> S2
+
+
+
+
+
+S.S.12,  \ Session timer and termination
+  S1,
+    #START: ---> S2
+  S2,
+    0.01": ADD H;
+           IF (H <= ((A(1)*60) * 1')) AND (C(3)<= A(13)) [@NOEND, @YESEND]
+           @NOEND: ---> S2
+           @YESEND: SUB C(3); SET D(G) = H, E(G) = 100; SET D(G+1) = -987.987, E(G+1) = -987.987;
+                    SHOW 1,   INFUSIONS: , C(3);
+                    SHOW 2,   RIGHT PRESS: , C(0);
+                    SHOW 3,   LEFT PRESS: , C(1);
+                    SHOW 6,   HEAD ENT: , C(2) ---> STOPABORTFLUSH
