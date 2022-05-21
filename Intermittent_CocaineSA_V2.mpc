@@ -28,9 +28,19 @@
 \ Revisions:
 \
 \
+\ 05-2022: Phillips Silva wants Continuous and Intermittent SA programs
+\           with the event stamps from the JN_Liq_SelfAdmin series.
+\           He also wants "no response non-contingent delivery timer. 
+\           Could you please include that and a counter for the 
+\           non-contingent infusions?"  
 \
 \
+\        : This is Continuous_CocaineSA_V2 or Intermittent_CocaineSA_V2
 \
+
+
+
+
 
 \
 \
@@ -50,7 +60,6 @@
 ^HouseLight       = 7
 ^SyringePump      = 8
 ^Fan              = 16
-
 
 
 
@@ -81,6 +90,7 @@
 \ A(11) = Infusion duration (sec)
 \ A(12) = Intermittent or Continuous (0:Intermitt 1:Cont)
 \ A(13) = Maximum infusions
+\ A(14) = Number of drug periods
 \
 \ B(0)  = A(2) converted to system time
 \ B(1)  = A(3) converted to system time
@@ -156,10 +166,11 @@ VAR_ALIAS Active lever (0:right 1:left) = A(0)
 VAR_ALIAS Infusion duration (sec) = A(11)
 VAR_ALIAS Post-inf time-out length (sec) = A(4)
 \VAR_ALIAS Intermittent or Continuous (0:Intermitt 1:Cont) = A(12)
-VAR_ALIAS Length of drug periods (min) = A(2)
-VAR_ALIAS Length of no-drug periods (min) = A(3)
-VAR_ALIAS Houselight for drug periods (0:off 1:on) = A(5)
-VAR_ALIAS Houselight for no-drug periods (0:off 1:on) = A(6)
+\VAR_ALIAS Number of drug periods = A(14)
+\VAR_ALIAS Length of drug periods (min) = A(2)
+\VAR_ALIAS Length of no-drug periods (min) = A(3)
+\VAR_ALIAS Houselight for drug periods (0:off 1:on) = A(5)
+\VAR_ALIAS Houselight for no-drug periods (0:off 1:on) = A(6)
 VAR_ALIAS -------------------------------------------------------------------- = A(9)
 
 
@@ -167,7 +178,7 @@ VAR_ALIAS -------------------------------------------------------------------- =
 S.S.1,  \ Default set-up, drug/no-drug switching
   S1,
     0": SET A(0)  = 1;    \Active lever (0:right 1:left)
-        SET A(1)  = 8;    \Session length in hours
+        SET A(1)  = 8;    \Session length in hours - NOT USED IN INTERMITTENT
         SET A(2)  = 5;    \Length of drug periods (min)
         SET A(3)  = 25;   \Length of no-drug periods (min)
         SET A(4)  = 3.5;  \Post-infusion time-out length (sec)
@@ -177,6 +188,7 @@ S.S.1,  \ Default set-up, drug/no-drug switching
         SET A(11) = 3.5;  \Infusion duration(sec)
         SET A(12) = 0;    \Intermittent or continuous (0:Itermittent  1:Continuous)
         SET A(13) = 2000; \Maximum number of infusions - NOT USED FOR NON-TRAINING
+        SET A(14) = 1;    \Number of drug periods
         SET D(0) = -987.987, E(0) = -987.987;
         SET K(1) = -987.987, L(1) = -987.987, M(1) = -987.987;
         SET I(0) = -987.987;
@@ -189,11 +201,18 @@ S.S.1,  \ Default set-up, drug/no-drug switching
                    SET D(G) = H; SET E(G) = 20; ADD G; SET D(G) = -987.987; SET E(G) = -987.987;
                    SET D(G) = H; SET E(G) = 25; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
   S3,
-    B(0)#T: Z2; SET B(1) = A(3) * 1'; ADD C(5);
-            SET D(G) = H; SET E(G) = 21; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S4
+    B(0)#T: IF A(10) = 0 [@SWITCH, @WAIT]
+            @SWITCH: Z2; SET B(1) = A(3) * 1'; ADD C(5);
+                     SET D(G) = H; SET E(G) = 21; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S4
+            @WAIT: ---> S5 \wait for post-infusion timeout to complete
   S4,
     B(1)#T: SET B(0) = A(2) * 1'; Z1; ADD C(4);
             SET D(G) = H; SET E(G) = 20; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S3
+  S5,
+    0": IF A(10) = 0 [@SWITCH, @WAIT]
+        @SWITCH: Z2; SET B(1) = A(3) * 1';
+                 SET D(G) = H; SET E(G) = 21; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S4
+        @WAIT: ---> S5 \wait for post-infusion timeout to complete
 
 
 
@@ -227,7 +246,7 @@ S.S.3,  \ Infusion and post-infusion timeout
     1#R^RightLeverIn: IF (C(3)< A(13)) [@REWARD, @NOREWARD]
                       @REWARD: ON ^SyringePump; Z3;
                                SET B(9) = A(11) * 1";
-                               ADD K(N);
+                               ADD K(N); 
                                SET A(10) = 1;
                                SET I(C(3)) = H; SET I(C(3)+1) = -987.987;
                                SET D(G) = H; SET E(G) = 3; ADD G, C(3); SET D(G) = -987.987; SET E(G) = -987.987 ---> S3
@@ -236,13 +255,9 @@ S.S.3,  \ Infusion and post-infusion timeout
   S3,
     B(9)#T: OFF ^SyringePump; Z4; SET B(4) = A(4) * 1";
             SET D(G) = H; SET E(G) = 4; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S4
-    #Z2: OFF ^SyringePump; Z4; SET B(4) = A(4) * 1"; SET A(10) = 0;
-         SET D(G) = H; SET E(G) = 4; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S1 
   S4,
     B(4)#T: Z5; SET A(10) = 0;
             SET D(G) = H; SET E(G) = 22; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S2
-    #Z2: Z5; SET A(10) = 0;
-         SET D(G) = H; SET E(G) = 22; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S1 
   S5,
     1#R^LeftLeverIn: IF (C(3)< A(13)) [@REWARD, @NOREWARD]
                      @REWARD: ON ^SyringePump; Z3;
@@ -251,18 +266,14 @@ S.S.3,  \ Infusion and post-infusion timeout
                               SET A(10) = 1;
                               SET I(C(3)) = H; SET I(C(3)+1) = -987.987;
                               SET D(G) = H; SET E(G) = 3; ADD G, C(3); SET D(G) = -987.987; SET E(G) = -987.987 ---> S6
-                     @NOREWARD: ADD C(3)---> SX
+                     @NOREWARD: ADD C(3) ---> SX
     #Z2: OFF ^SyringePump; SET A(10) = 0 ---> S1  \Turn pump off in case it is on and transition to no-drug period
   S6,
     B(9)#T: OFF ^SyringePump; Z4; SET B(4) = A(4) * 1";
             SET D(G) = H; SET E(G) = 4; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S7
-    #Z2: OFF ^SyringePump; Z4; SET B(4) = A(4) * 1"; SET A(10) = 0;
-         SET D(G) = H; SET E(G) = 4; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S1 
   S7,
     B(4)#T: Z5; SET A(10) = 0;
-            SET D(G) = H; SET E(G) = 22; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S5
-    #Z2: Z5; SET A(10) = 0;
-         SET D(G) = H; SET E(G) = 22; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S1 
+    SET D(G) = H; SET E(G) = 22; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S5
 
 
 
@@ -281,11 +292,11 @@ S.S.4,  \ Head entry detector
 S.S.5,  \ House light
   S1,
     #Z1: IF A(5) = 0 [@DRUGHLOFF, @DRUGHLON]
-         @DRUGHLOFF: OFF ^HouseLight; SET D(G) = H; SET E(G) = 19; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
-         @DRUGHLON: ON ^HouseLight; SET D(G) = H; SET E(G) = 18; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+     @DRUGHLOFF: OFF ^HouseLight; SET D(G) = H; SET E(G) = 19; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+     @DRUGHLON: ON ^HouseLight; SET D(G) = H; SET E(G) = 18; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
     #Z2: IF A(6) = 0 [@NODRUGHLOFF, @NODRUGHLON]
-         @NODRUGHLOFF: OFF ^HouseLight; SET D(G) = H; SET E(G) = 19; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
-         @NODRUGHLON: ON ^HouseLight; SET D(G) = H; SET E(G) = 18; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+     @NODRUGHLOFF: OFF ^HouseLight; SET D(G) = H; SET E(G) = 19; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+     @NODRUGHLON: ON ^HouseLight; SET D(G) = H; SET E(G) = 18; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
 
 
 
@@ -341,14 +352,16 @@ S.S.9,  \ Display
 
 S.S.10,  \ Drug and no-drug period countdown
   S1,
-    #START!#Z1: SET B(5) = A(2) * 60; SHOW 7, DRUG PERIOD SEC: , B(5) ---> S2
+    #START: IF A(12) = 0 [@INTERMITT, @CONT]
+            @INTERMITT: SET B(5) = A(2) * 60; SHOW 7, DRUG PERIOD SEC: , B(5) ---> S2
+            @CONT: ---> SX
   S2,
     1": SUB B(5); IF B(5) < 0 [@NOMARK, @MARK]
         @NOMARK: ---> S2
         @MARK: SHOW 7, DRUG PERIOD SEC: , B(5) ---> S2
     #Z2: SET B(6) = A(3) * 60; SHOW 7, NO-DRUG PERIOD SEC: , B(6) ---> S3
   S3,
-    1": SUB B(6); IF B(6) < 0 [@NOMARK, @MARK]
+   1": SUB B(6); IF B(6) < 0 [@NOMARK, @MARK]
         @NOMARK: ---> S3
         @MARK: SHOW 7, NO-DRUG PERIOD SEC: , B(6) ---> S3
     #Z1: SET B(5) = A(2) * 60; SHOW 7, DRUG PERIOD SEC: , B(5) ---> S2
@@ -372,10 +385,10 @@ S.S.12,  \ Session timer and termination
     #START: ---> S2
   S2,
     0.01": ADD H;
-           IF (H <= ((A(1)*60) * 1')) AND (C(3)<= A(13)) [@NOEND, @YESEND]
+           IF  H <= ((A(1)*60)*1') [@NOEND, @YESEND]
            @NOEND: ---> S2
            @YESEND: SET D(G) = H, E(G) = 100; SET D(G+1) = -987.987, E(G+1) = -987.987;
                     SHOW 1,   INFUSIONS: , C(3);
                     SHOW 2,   RIGHT PRESS: , C(0);
                     SHOW 3,   LEFT PRESS: , C(1);
-                    SHOW 6,   HEAD ENT: , C(2) ---> STOPABORTFLUSH
+                    SHOW 6,   HEAD ENT: , C(2)  ---> STOPABORTFLUSH

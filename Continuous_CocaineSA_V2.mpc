@@ -28,9 +28,19 @@
 \ Revisions:
 \
 \
+\ 05-2022: Phillips Silva wants Continuous and Intermittent SA programs
+\           with the event stamps from the JN_Liq_SelfAdmin series.
+\           He also wants "no response non-contingent delivery timer. 
+\           Could you please include that and a counter for the 
+\           non-contingent infusions?"  
 \
 \
+\        : This is Continuous_CocaineSA_V2 or Intermittent_CocaineSA_V2
 \
+
+
+
+
 
 \
 \
@@ -340,19 +350,21 @@ S.S.9,  \ Display
 
 
 
-\S.S.10,  \ Drug and no-drug period countdown
-\  S1,
-\    #START!#Z1: SET B(5) = A(2) * 60; SHOW 7, DRUG PERIOD SEC: , B(5) ---> S2
-\  S2,
-\    1": SUB B(5); IF B(5) < 0 [@NOMARK, @MARK]
-\        @NOMARK: ---> S2
-\        @MARK: SHOW 7, DRUG PERIOD SEC: , B(5) ---> S2
-\    #Z2: SET B(6) = A(3) * 60; SHOW 7, NO-DRUG PERIOD SEC: , B(6) ---> S3
-\  S3,
-\   1": SUB B(6); IF B(6) < 0 [@NOMARK, @MARK]
-\        @NOMARK: ---> S3
-\        @MARK: SHOW 7, NO-DRUG PERIOD SEC: , B(6) ---> S3
-\    #Z1: SET B(5) = A(2) * 60; SHOW 7, DRUG PERIOD SEC: , B(5) ---> S2
+S.S.10,  \ Drug and no-drug period countdown
+  S1,
+    #START: IF A(12) = 0 [@INTERMITT, @CONT]
+            @INTERMITT: SET B(5) = A(2) * 60; SHOW 7, DRUG PERIOD SEC: , B(5) ---> S2
+            @CONT: ---> SX
+  S2,
+    1": SUB B(5); IF B(5) < 0 [@NOMARK, @MARK]
+        @NOMARK: ---> S2
+        @MARK: SHOW 7, DRUG PERIOD SEC: , B(5) ---> S2
+    #Z2: SET B(6) = A(3) * 60; SHOW 7, NO-DRUG PERIOD SEC: , B(6) ---> S3
+  S3,
+   1": SUB B(6); IF B(6) < 0 [@NOMARK, @MARK]
+        @NOMARK: ---> S3
+        @MARK: SHOW 7, NO-DRUG PERIOD SEC: , B(6) ---> S3
+    #Z1: SET B(5) = A(2) * 60; SHOW 7, DRUG PERIOD SEC: , B(5) ---> S2
 
 
 
