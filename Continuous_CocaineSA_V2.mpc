@@ -114,25 +114,35 @@
 \ E()   = event identity stamp
 \       1  - Right press
 \       2  - Left press
-\       3  - Infusion start
-\       4  - Infusion end
-\       5  - Food tray head entry
-\       6  - Right lever extends
-\       7  - Left lever extends
-\       8  - Right lever retracts
-\       9  - Left lever retracts
-\      14  - Right lever cue light on
-\      15  - Left lever cue light on
-\      16  - Right lever cue light off
-\      17  - Left lever cue light off
-\      18  - Houselight on
-\      19  - Houselight off
-\      20  - Drug period starts
-\      21  - No-drug period starts
-\      22  - Post-infusion timeout over
-\      23  - Tone on
-\      24  - Tone off
-\      25  - Continuous session
+\       3  - Rewarded rt Lev press
+\       4  - Rewarded lt Lev press
+\       5  - Reinforcement delivery
+\       6  - Food tray head entry
+\       7  - Right lever cue light on
+\       8  - Left lever cue light on
+\       9  - Right lever cue light off
+\       10 - Left lever cue light off
+\       11  - Houselight on
+\       12  - Houselight off
+\       13  - Tone on
+\       14  - Tone off
+\       17  - Infusion turns on
+\       18  - Infusion turns off
+\       19  = Timeout ends and/or drug available at START
+
+\       20  = Rt Lev press during timeout
+\       21  = Lt Lev press during timeout
+\       22  = Active Lev press
+\       23  = Inactive Lev press
+
+\       24  = Timeout starts
+\       26  - Right lever extends
+\       27  - Left lever extends
+\       28  - Right lever retracts
+\       29  - Left lever retracts
+\       30  - Drug period starts
+\       31  - No-drug period starts
+\       32  - Continuous session
 \     100  - End session marker
 \
 \ G     = Event counter
@@ -194,24 +204,25 @@ S.S.1,  \ Default set-up, drug/no-drug switching
         SET I(0) = -987.987;
         ON ^Fan ---> S2
   S2,
-    #START: IF A(12) = 0 [@INTERMITT, @CONT]
+    #START: SET E(G) = 19; ADD G; SET D(G) = -987.987; SET E(G) = -987.987;
+            IF A(12) = 0 [@INTERMITT, @CONT]
             @INTERMITT: SET B(0) = A(2) * 1'; Z1; ADD C(4);
-                        SET D(G) = H; SET E(G) = 20; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S3
+                        SET D(G) = H; SET E(G) = 30; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S3
             @CONT: Z1; ADD C(4);
-                   SET D(G) = H; SET E(G) = 20; ADD G; SET D(G) = -987.987; SET E(G) = -987.987;
-                   SET D(G) = H; SET E(G) = 25; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+                   SET D(G) = H; SET E(G) = 30; ADD G; SET D(G) = -987.987; SET E(G) = -987.987;
+                   SET D(G) = H; SET E(G) = 32; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
   S3,
     B(0)#T: IF A(10) = 0 [@SWITCH, @WAIT]
             @SWITCH: Z2; SET B(1) = A(3) * 1'; ADD C(5);
-                     SET D(G) = H; SET E(G) = 21; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S4
+                     SET D(G) = H; SET E(G) = 31; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S4
             @WAIT: ---> S5 \wait for post-infusion timeout to complete
   S4,
     B(1)#T: SET B(0) = A(2) * 1'; Z1; ADD C(4);
-            SET D(G) = H; SET E(G) = 20; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S3
+            SET D(G) = H; SET E(G) = 30; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S3
   S5,
     0": IF A(10) = 0 [@SWITCH, @WAIT]
         @SWITCH: Z2; SET B(1) = A(3) * 1';
-                 SET D(G) = H; SET E(G) = 21; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S4
+                 SET D(G) = H; SET E(G) = 31; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S4
         @WAIT: ---> S5 \wait for post-infusion timeout to complete
 
 
@@ -232,6 +243,21 @@ S.S.2,  \ Individual right and left presses and binning during drug period
                      @LEFT: ADD L(N) ---> SX
     B(8)#T: ADD N; SET K(N) = 0, L(N) = 0, M(N) = 0, K(N+1) = -987.987, L(N+1) = -987.987, M(N+1) = -987.987 ---> S2
     #Z2: ---> S1  \No-drug period
+    #Z4: ---> S3  \Timeout period starts
+  S3,
+    1#R^RightLeverIn: SET D(G) = H; SET E(G) = 1; ADD G, C(0); SET D(G) = -987.987; SET E(G) = -987.987;
+                      SET D(G) = H; SET E(G) = 20; ADD G, C(0); SET D(G) = -987.987; SET E(G) = -987.987;
+                      IF A(0) = 0 [@RIGHT, @LEFT]
+                      @RIGHT: ADD L(N) ---> SX
+                      @LEFT: ADD M(N) ---> SX
+    1#R^LeftLeverIn: SET D(G) = H; SET E(G) = 2; ADD G, C(1); SET D(G) = -987.987; SET E(G) = -987.987;
+                     SET D(G) = H; SET E(G) = 21; ADD G, C(1); SET D(G) = -987.987; SET E(G) = -987.987;
+                     IF A(0) = 0 [@RIGHT, @LEFT]
+                     @RIGHT: ADD M(N) ---> SX
+                     @LEFT: ADD L(N) ---> SX
+    B(8)#T: ADD N; SET K(N) = 0, L(N) = 0, M(N) = 0, K(N+1) = -987.987, L(N+1) = -987.987, M(N+1) = -987.987 ---> S2
+    #Z2: ---> S1  \No-drug period
+    #Z5: ---> S2  \Timeout period ends
 
 
 
@@ -249,15 +275,19 @@ S.S.3,  \ Infusion and post-infusion timeout
                                ADD K(N); 
                                SET A(10) = 1;
                                SET I(C(3)) = H; SET I(C(3)+1) = -987.987;
-                               SET D(G) = H; SET E(G) = 3; ADD G, C(3); SET D(G) = -987.987; SET E(G) = -987.987 ---> S3
+                               SET D(G) = H; SET E(G) = 17; ADD G, C(3);
+                               SET D(G) = H; SET E(G) = 5; ADD G, C(3);
+                               SET D(G) = H; SET E(G) = 3; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S3
                       @NOREWARD: ADD C(3) ---> SX
-    #Z2: OFF ^SyringePump; SET A(10) = 0 ---> S1  \Turn pump off in case it is on and transition to no-drug period
+    #Z2: OFF ^SyringePump; SET A(10) = 0;
+         SET E(G) = 18; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S1  \Turn pump off in case it is on and transition to no-drug period
   S3,
     B(9)#T: OFF ^SyringePump; Z4; SET B(4) = A(4) * 1";
-            SET D(G) = H; SET E(G) = 4; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S4
+            SET D(G) = H; SET E(G) = 18; ADD G; SET D(G) = -987.987; SET E(G) = -987.987;
+            SET D(G) = H; SET E(G) = 24; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S4
   S4,
     B(4)#T: Z5; SET A(10) = 0;
-            SET D(G) = H; SET E(G) = 22; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S2
+            SET D(G) = H; SET E(G) = 19; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S2
   S5,
     1#R^LeftLeverIn: IF (C(3)< A(13)) [@REWARD, @NOREWARD]
                      @REWARD: ON ^SyringePump; Z3;
@@ -265,15 +295,19 @@ S.S.3,  \ Infusion and post-infusion timeout
                               ADD K(N);
                               SET A(10) = 1;
                               SET I(C(3)) = H; SET I(C(3)+1) = -987.987;
-                              SET D(G) = H; SET E(G) = 3; ADD G, C(3); SET D(G) = -987.987; SET E(G) = -987.987 ---> S6
+                              SET D(G) = H; SET E(G) = 17; ADD G, C(3);
+                              SET D(G) = H; SET E(G) = 5; ADD G, C(3); 
+                              SET D(G) = H; SET E(G) = 4; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S6
                      @NOREWARD: ADD C(3) ---> SX
-    #Z2: OFF ^SyringePump; SET A(10) = 0 ---> S1  \Turn pump off in case it is on and transition to no-drug period
+    #Z2: OFF ^SyringePump; SET A(10) = 0;
+         SET E(G) = 18; ADD G; SET D(G) = -987.987; SET E(G) = -987.987  ---> S1  \Turn pump off in case it is on and transition to no-drug period
   S6,
     B(9)#T: OFF ^SyringePump; Z4; SET B(4) = A(4) * 1";
-            SET D(G) = H; SET E(G) = 4; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S7
+            SET D(G) = H; SET E(G) = 18; ADD G; SET D(G) = -987.987; SET E(G) = -987.987;
+            SET D(G) = H; SET E(G) = 24; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S7
   S7,
     B(4)#T: Z5; SET A(10) = 0;
-    SET D(G) = H; SET E(G) = 22; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S5
+    SET D(G) = H; SET E(G) = 19; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> S5
 
 
 
@@ -283,7 +317,7 @@ S.S.4,  \ Head entry detector
   S1,
     #START: ---> S2
   S2,
-    1#R^HeadEntry: SET D(G) = H; SET E(G) = 5; ADD G, C(2); SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+    1#R^HeadEntry: SET D(G) = H; SET E(G) = 6; ADD G, C(2); SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
 
 
 
@@ -292,11 +326,11 @@ S.S.4,  \ Head entry detector
 S.S.5,  \ House light
   S1,
     #Z1: IF A(5) = 0 [@DRUGHLOFF, @DRUGHLON]
-     @DRUGHLOFF: OFF ^HouseLight; SET D(G) = H; SET E(G) = 19; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
-     @DRUGHLON: ON ^HouseLight; SET D(G) = H; SET E(G) = 18; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+     @DRUGHLOFF: OFF ^HouseLight; SET D(G) = H; SET E(G) = 12; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+     @DRUGHLON: ON ^HouseLight; SET D(G) = H; SET E(G) = 11; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
     #Z2: IF A(6) = 0 [@NODRUGHLOFF, @NODRUGHLON]
-     @NODRUGHLOFF: OFF ^HouseLight; SET D(G) = H; SET E(G) = 19; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
-     @NODRUGHLON: ON ^HouseLight; SET D(G) = H; SET E(G) = 18; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+     @NODRUGHLOFF: OFF ^HouseLight; SET D(G) = H; SET E(G) = 12; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+     @NODRUGHLON: ON ^HouseLight; SET D(G) = H; SET E(G) = 11; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
 
 
 
@@ -305,11 +339,11 @@ S.S.5,  \ House light
 S.S.6,   \ Lever Cue lights
   S1,
     #Z3: IF A(0) = 0 [@RIGHT, @LEFT]
-         @RIGHT: ON ^RightCueLight; SET D(G) = H; SET E(G) = 14; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
-         @LEFT:  ON ^LeftCueLight; SET D(G) = H; SET E(G) = 15; ADD G; SET D(G) = -987.987; SET E(G) = -987.987  ---> SX
+         @RIGHT: ON ^RightCueLight; SET D(G) = H; SET E(G) = 7; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+         @LEFT:  ON ^LeftCueLight; SET D(G) = H; SET E(G) = 8; ADD G; SET D(G) = -987.987; SET E(G) = -987.987  ---> SX
     #Z4: IF A(0) = 0 [@RIGHT, @LEFT]
-         @RIGHT: OFF ^RightCueLight; SET D(G) = H; SET E(G) = 16; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
-         @LEFT:  OFF ^LeftCueLight; SET D(G) = H; SET E(G) = 17; ADD G; SET D(G) = -987.987; SET E(G) = -987.987  ---> SX
+         @RIGHT: OFF ^RightCueLight; SET D(G) = H; SET E(G) = 9; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+         @LEFT:  OFF ^LeftCueLight; SET D(G) = H; SET E(G) = 10; ADD G; SET D(G) = -987.987; SET E(G) = -987.987  ---> SX
 
 
 
@@ -317,8 +351,8 @@ S.S.6,   \ Lever Cue lights
 
 S.S.7,   \ Tone
   S1,
-    #Z3: ON ^Sonalert; SET D(G) = H; SET E(G) = 23; ADD G; SET D(G) = -987.987; SET E(G) = -987.987  ---> SX
-    #Z4: OFF ^Sonalert; SET D(G) = H; SET E(G) = 24; ADD G; SET D(G) = -987.987; SET E(G) = -987.987  ---> SX
+    #Z3: ON ^Sonalert; SET D(G) = H; SET E(G) = 13; ADD G; SET D(G) = -987.987; SET E(G) = -987.987  ---> SX
+    #Z4: OFF ^Sonalert; SET D(G) = H; SET E(G) = 14; ADD G; SET D(G) = -987.987; SET E(G) = -987.987  ---> SX
 
 
 
@@ -327,11 +361,11 @@ S.S.7,   \ Tone
 S.S.8,   \ Levers extend and retract
   S1,
     #Z1: ON ^RightLeverOut, ^LeftLeverOut;
-         SET D(G) = H; SET E(G) = 6; ADD G; SET D(G) = -987.987; SET E(G) = -987.987;
-         SET D(G) = H; SET E(G) = 7; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+         SET D(G) = H; SET E(G) = 26; ADD G; SET D(G) = -987.987; SET E(G) = -987.987;
+         SET D(G) = H; SET E(G) = 27; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
     #Z2: OFF ^RightLeverOut, ^LeftLeverOut;
-         SET D(G) = H; SET E(G) = 8; ADD G; SET D(G) = -987.987; SET E(G) = -987.987;
-         SET D(G) = H; SET E(G) = 9; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+         SET D(G) = H; SET E(G) = 28; ADD G; SET D(G) = -987.987; SET E(G) = -987.987;
+         SET D(G) = H; SET E(G) = 29; ADD G; SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
 
 
 
