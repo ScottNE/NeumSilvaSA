@@ -129,12 +129,10 @@
 \       17  - Infusion turns on
 \       18  - Infusion turns off
 \       19  = Timeout ends and/or drug available at START
-
 \       20  = Rt Lev press during timeout
 \       21  = Lt Lev press during timeout
 \       22  = Active Lev press
 \       23  = Inactive Lev press
-
 \       24  = Timeout starts
 \       26  - Right lever extends
 \       27  - Left lever extends
@@ -235,12 +233,12 @@ S.S.2,  \ Individual right and left presses and binning during drug period
   S2,
     1#R^RightLeverIn: SET D(G) = H; SET E(G) = 1; ADD G, C(0); SET D(G) = -987.987; SET E(G) = -987.987;
                       IF A(0) = 0 [@RIGHT, @LEFT]
-                      @RIGHT: ADD L(N) ---> SX
-                      @LEFT: ADD M(N) ---> SX
+                      @RIGHT: ADD L(N); SET D(G) = H; SET E(G) = 22; ADD G, C(0); SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+                      @LEFT: ADD M(N); SET D(G) = H; SET E(G) = 23; ADD G, C(0); SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
     1#R^LeftLeverIn: SET D(G) = H; SET E(G) = 2; ADD G, C(1); SET D(G) = -987.987; SET E(G) = -987.987;
                      IF A(0) = 0 [@RIGHT, @LEFT]
-                     @RIGHT: ADD M(N) ---> SX
-                     @LEFT: ADD L(N) ---> SX
+                     @RIGHT: ADD M(N); SET D(G) = H; SET E(G) = 23; ADD G, C(0); SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+                     @LEFT: ADD L(N); SET D(G) = H; SET E(G) = 22; ADD G, C(0); SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
     B(8)#T: ADD N; SET K(N) = 0, L(N) = 0, M(N) = 0, K(N+1) = -987.987, L(N+1) = -987.987, M(N+1) = -987.987 ---> S2
     #Z2: ---> S1  \No-drug period
     #Z4: ---> S3  \Timeout period starts
@@ -248,13 +246,13 @@ S.S.2,  \ Individual right and left presses and binning during drug period
     1#R^RightLeverIn: SET D(G) = H; SET E(G) = 1; ADD G, C(0); SET D(G) = -987.987; SET E(G) = -987.987;
                       SET D(G) = H; SET E(G) = 20; ADD G, C(0); SET D(G) = -987.987; SET E(G) = -987.987;
                       IF A(0) = 0 [@RIGHT, @LEFT]
-                      @RIGHT: ADD L(N) ---> SX
-                      @LEFT: ADD M(N) ---> SX
+                      @RIGHT: ADD L(N); SET D(G) = H; SET E(G) = 22; ADD G, C(0); SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+                      @LEFT: ADD M(N); SET D(G) = H; SET E(G) = 23; ADD G, C(0); SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
     1#R^LeftLeverIn: SET D(G) = H; SET E(G) = 2; ADD G, C(1); SET D(G) = -987.987; SET E(G) = -987.987;
                      SET D(G) = H; SET E(G) = 21; ADD G, C(1); SET D(G) = -987.987; SET E(G) = -987.987;
                      IF A(0) = 0 [@RIGHT, @LEFT]
-                     @RIGHT: ADD M(N) ---> SX
-                     @LEFT: ADD L(N) ---> SX
+                     @RIGHT: ADD M(N); SET D(G) = H; SET E(G) = 23; ADD G, C(0); SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
+                     @LEFT: ADD L(N); SET D(G) = H; SET E(G) = 22; ADD G, C(0); SET D(G) = -987.987; SET E(G) = -987.987 ---> SX
     B(8)#T: ADD N; SET K(N) = 0, L(N) = 0, M(N) = 0, K(N+1) = -987.987, L(N+1) = -987.987, M(N+1) = -987.987 ---> S2
     #Z2: ---> S1  \No-drug period
     #Z5: ---> S2  \Timeout period ends
